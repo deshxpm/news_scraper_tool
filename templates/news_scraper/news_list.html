@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Explore the latest news from various sources.">
+    <title>Latest News</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f1f3f5;
+            font-family: 'Arial', sans-serif;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 3rem;
+            font-weight: bold;
+            color: #343a40;
+        }
+
+        /* News Filters */
+        .filters {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-buttons .btn {
+            margin-right: 0.75rem;
+            border-radius: 20px;
+        }
+
+        .filter-buttons .btn:hover {
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Latest News Highlight */
+        .latest-news {
+            margin-bottom: 3rem;
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .latest-news img {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            border-radius: 15px;
+        }
+
+        .latest-news h2 {
+            margin-top: 1.5rem;
+            font-size: 2rem;
+            color: #333;
+            text-align: center;
+        }
+
+        .latest-news p {
+            font-size: 1rem;
+            padding: 0 1rem;
+            color: #555;
+            text-align: center;
+        }
+
+        .latest-news a {
+            display: block;
+            text-align: center;
+            margin-top: 1rem;
+            background-color: #007bff;
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 25px;
+            text-decoration: none;
+        }
+
+        .latest-news a:hover {
+            background-color: #0056b3;
+        }
+
+        /* News Cards */
+        .news-card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+            transition: transform 0.3s;
+        }
+
+        .news-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .news-card img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+
+        .news-card .card-body {
+            padding: 1.5rem;
+        }
+
+        .news-card h5 {
+            font-size: 1.3rem;
+            color: #333;
+            margin-bottom: 1rem;
+            font-weight: 500;
+        }
+
+        .news-card small {
+            display: block;
+            margin-bottom: 0.75rem;
+            color: #888;
+        }
+
+        .news-card p {
+            color: #555;
+            text-overflow: ellipsis;
+            overflow: hidden;
+            white-space: nowrap;
+        }
+
+        .news-card a {
+            background-color: #28a745;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .news-card a:hover {
+            background-color: #218838;
+        }
+
+        /* Loader Styling */
+        .loader-container {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            z-index: 1050;
+        }
+
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <h1>Latest News</h1>
+
+        <!-- News Filters -->
+        <div class="filters">
+            <div class="filter-buttons">
+                <button class="btn btn-outline-primary filter-btn" data-category="all">All</button>
+                <button class="btn btn-outline-secondary filter-btn" data-category="technology">Technology</button>
+                <button class="btn btn-outline-success filter-btn" data-category="politics">Politics</button>
+                <button class="btn btn-outline-danger filter-btn" data-category="sports">Sports</button>
+            </div>
+            <div class="d-flex align-items-center">
+                {% if user.is_superuser %}
+                <select id="sourceDropdown" class="form-select me-3" style="width: 200px;">
+                    <option value="all">All Sources</option>
+                    {% for source in sources %}
+                    <option value="{{source.id}}">{{source.name}}</option>
+                    {% endfor %}
+                </select>
+                {% endif %}
+                <input type="text" id="searchBar" class="form-control" placeholder="Search news..." style="width: 300px;">
+            </div>
+        </div>
+
+        <!-- Highlighted Latest News -->
+        <div class="latest-news">
+            {% if articles|length > 0 %}
+            <img src="{{ articles.0.image_url|default:'/static/images/placeholder.png' }}" alt="Latest news image">
+            <h2>{{ articles.0.title }}</h2>
+            <p class="text-muted"><small>Category: {{ articles.0.category|default:'General' }}</small></p>
+            <p>{{ articles.0.description|default:'No description available' }}</p>
+            <p>{{ articles.0.source.name|default:'--' }}</p>
+            <a href="{{ articles.0.link }}" class="btn btn-primary" target="_blank" rel="noopener noreferrer">Read More</a>
+            {% else %}
+            <p class="text-center">No latest news available.</p>
+            {% endif %}
+        </div>
+
+        <!-- News Articles -->
+        <div class="row" id="newsArticles">
+            {% for article in articles|slice:"1:" %}
+            <div class="col-lg-4 col-md-6">
+                <div class="news-card" data-source="{{ article.source.id }}">
+                    <img src="{{ article.image_url|default:'/static/images/placeholder.png' }}" alt="Image for {{ article.title }}">
+                    <div class="card-body">
+                        <h5>{{ article.title|default:'No Title Available' }}</h5>
+                        <small>Category: {{ article.category|default:'General' }}</small>
+                        <p class="text-truncate">{{ article.description|default:'No description available' }}</p>
+                        <a href="{{ article.link }}" class="btn btn-primary" target="_blank" rel="noopener noreferrer">Read More</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Loader -->
+    <div id="loader" class="loader-container">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <script>
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        const searchBar = document.getElementById('searchBar');
+        const sourceDropdown = document.getElementById('sourceDropdown');
+        const loader = document.getElementById('loader');
+    
+        // Filter by category
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const category = btn.getAttribute('data-category');
+                filterNews(category);
+            });
+        });
+    
+        // Search functionality
+        searchBar.addEventListener('input', () => {
+            const query = searchBar.value.toLowerCase();
+            filterNews(null, query);
+        });
+    
+        // Filter by source (Superuser only)
+        if (sourceDropdown) {
+            sourceDropdown.addEventListener('change', () => {
+                const source = sourceDropdown.value;
+                filterNews(null, null, source);
+            });
+        }
+    
+        // AJAX function to filter news
+        function filterNews(category = null, query = null, source = null) {
+            // Show the loader
+            loader.style.display = 'flex';
+    
+            // AJAX call to the server
+            $.ajax({
+                url: '{% url "refresh-news" %}',  // URL for refreshing news
+                method: 'GET',
+                data: {
+                    category: category || 'all',  // Default to 'all' if category is not provided
+                    query: query || '',           // Default to empty string if query is not provided
+                    source: source || 'all',      // Default to 'all' if source is not provided
+                },
+                success: function(response) {
+                    // Hide the loader
+                    loader.style.display = 'none';
+    
+                    // Update the news articles with the response HTML
+                    $('#newsArticles').html(response.articles_html);
+    
+                    // Update the latest news section if you have one
+                    $('.latest-news').html(response.latest_news_html);
+                },
+                error: function() {
+                    // Hide the loader and show an error message
+                    loader.style.display = 'none';
+                    alert('Error loading news.');
+                }
+            });
+        }
+    </script>
+    
+</body>
+</html>
